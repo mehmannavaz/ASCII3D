@@ -1,0 +1,4 @@
+# content of pytest.toml
+[pytest]
+addopts = ["-ra", "-q"]
+

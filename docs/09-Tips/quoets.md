@@ -1,0 +1,2 @@
+- "Outside of box we should make box, inside of the box be free to just show how it looks"
+- "It's like the UFO catcher... You need only See the from front and one from left or right... the you can make it!"
