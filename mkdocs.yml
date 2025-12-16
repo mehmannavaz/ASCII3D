@@ -4,5 +4,4 @@ nav:
   - Theory: 01-Theory/00-SimpleGaze.md
   - Tips: 09-Tips/quoets.md
   - TODO: 10-TODO/01-2Sides3dRendering.md
-theme: materialw
-
+theme: material
