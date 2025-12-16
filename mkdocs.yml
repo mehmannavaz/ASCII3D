@@ -1,5 +1,6 @@
 site_name: ASCII3d
 nav:
-  - Home: 09-Tips/quoets.md
-  - About: 10-TODO/01-2Sides3dRendering.md
+  - Home: index.md
+  - Tips: 09-Tips/quoets.md
+  - TODO: 10-TODO/01-2Sides3dRendering.md
 theme: readthedocs
