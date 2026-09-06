@@ -19,7 +19,7 @@ import sys
 from .engine import turn
 from .examples import EXAMPLES
 from .routes import ROUTES, contact_sheet, route as route_render
-from .rotation import SPIN_AXES, play, to_gif
+from .rotation import play, to_gif
 from .theory import MESHES
 from . import utils
 from .version import __version__
@@ -42,8 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '-t', '--direction', choices=sorted(ROUTES), default='left',
         help='where the art turns to: left/right use the classic '
-             'engine shear, the other routes use the 3D wireframe '
-             '(default: left)')
+             'engine shear, the other routes use the box camera pose '
+             'renderer (default: left)')
     parser.add_argument(
         '-d', '--depth', type=int, default=1, metavar='N',
         help='how deep the box is, i.e. the size of the top/side '
@@ -64,7 +64,10 @@ def build_parser() -> argparse.ArgumentParser:
         help='fill the side face uniformly with CHAR (e.g. "/")')
     parser.add_argument(
         '--zoom', type=float, default=1.0, metavar='F',
-        help='scale factor of the wireframe routes (default: 1.0)')
+        help='(deprecated) kept for compatibility, ignored')
+    parser.add_argument(
+        '--no-shade', dest='shade', action='store_false', default=True,
+        help='spin frames: leave the side face unshaded')
     parser.add_argument(
         '--nine', action='store_true',
         help='render the art from all nine routes as a 3x3 gallery')
@@ -76,12 +79,13 @@ def build_parser() -> argparse.ArgumentParser:
         '--fps', type=float, default=10.0, metavar='F',
         help='frames per second of --spin (default: 10)')
     parser.add_argument(
-        '--axis', choices=SPIN_AXES, default='y', metavar='A',
-        help='rotation axis of --spin: y (turntable), x (cartwheel) '
-             'or z (coin spin) (default: y)')
+        '--axis', choices=('y', 'x', 'z'), default='y', metavar='A',
+        help='rotation axis for --theoretic spins: y (turntable), '
+             'x (cartwheel) or z (coin spin) (default: y)')
     parser.add_argument(
-        '--pitch', type=float, default=20.0, metavar='DEG',
-        help='camera elevation of --spin in degrees (default: 20)')
+        '--pitch', type=float, default=30.0, metavar='DEG',
+        help='constant downward look of --spin in degrees; the '
+             'camera always stays above the box (default: 30)')
     parser.add_argument(
         '--gif', metavar='PATH',
         help='export the 360 degree rotation as an animated GIF '
@@ -146,10 +150,9 @@ def _render(art: str, args: argparse.Namespace) -> str:
             shade=args.shade,
             fill=args.fill[:1] if args.fill else None,
         )
-    # Any of the other routes: 3D wireframe.
+    # Any of the other routes: the box camera pose renderer.
     depth = None if args.depth <= 1 else args.depth
-    return route_render(art, direction=args.direction, depth=depth,
-                        zoom=args.zoom)
+    return route_render(art, direction=args.direction, depth=depth)
 
 
 def _warn_if_wide(rendered: str) -> None:
@@ -263,12 +266,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.gif:
             mesh_to_gif(shape.vertices, shape.edges, args.gif,
                         steps=args.spin or 24, fps=args.fps,
-                        pitch=args.pitch)
+                        axis=args.axis, pitch=args.pitch)
             print(f'ascii3d: wrote {args.gif}')
             return 0
         if args.spin:
             timeline = mesh_frames(shape.vertices, shape.edges,
-                                   steps=args.spin, pitch=args.pitch)
+                                   steps=args.spin, axis=args.axis,
+                                   pitch=args.pitch)
             play_frames(timeline, fps=args.fps)
             return 0
         print(render_mesh(args.theoretic, pitch=args.pitch))
@@ -289,23 +293,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.gif:
         to_gif(art, args.gif, steps=args.spin or 24, fps=args.fps,
-               axis=args.axis, pitch=args.pitch,
-               depth=None if args.depth <= 1 else args.depth,
-               zoom=args.zoom)
+               pitch=args.pitch, shade=args.shade,
+               depth=None if args.depth <= 1 else args.depth)
         print(f'ascii3d: wrote {args.gif}')
         return 0
 
     if args.spin:
-        play(art, steps=args.spin, fps=args.fps, axis=args.axis,
-             pitch=args.pitch,
-             depth=None if args.depth <= 1 else args.depth,
-             zoom=args.zoom)
+        play(art, steps=args.spin, fps=args.fps, pitch=args.pitch,
+             shade=args.shade,
+             depth=None if args.depth <= 1 else args.depth)
         return 0
 
     if args.nine:
-        print(contact_sheet(art,
-                            depth=None if args.depth <= 1 else args.depth,
-                            zoom=args.zoom))
+        print(contact_sheet(
+            art, depth=None if args.depth <= 1 else args.depth))
         return 0
 
     rendered = _render(art, args)

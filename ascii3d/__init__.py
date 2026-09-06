@@ -36,6 +36,7 @@ from .routes import (  # noqa: F401
     nine_routes,
     route,
 )
+from .pose import Pose, render_pose, turntable_pose  # noqa: F401
 from . import version, utils, examples  # noqa: F401
 from . import wireframe, rotation, theory, raster  # noqa: F401
 
@@ -54,6 +55,9 @@ __all__ = [
     'ROUTES',
     'nine_routes',
     'contact_sheet',
+    'Pose',
+    'render_pose',
+    'turntable_pose',
     'version',
     'utils',
     'examples',
