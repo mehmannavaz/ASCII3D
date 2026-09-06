@@ -1,4 +1,8 @@
 # Simple test
+
+> The prototype below grew up: `ascii3d.engine` now implements it as the
+> `turn_left` / `turn_right` methods. See [Usage](../02-Usage/00-usage.md).
+
 ```python
 In [10]: counter = 0
     ...: for line in Example2.replace("|", "\\").split("\n"):

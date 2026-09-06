@@ -1,7 +1,13 @@
 site_name: ASCII3D
 nav:
   - Home: index.md
-  - Theory: 01-Theory/00-SimpleGaze.md
+  - Usage: 02-Usage/00-usage.md
+  - Theory:
+      - Simple Gaze: 01-Theory/00-SimpleGaze.md
+      - Simple Head: 01-Theory/01-SImpleHead.md
+      - How To Turn: 01-Theory/02-HowToTurn.md
+      - Look Anywhere: 01-Theory/03-LookAnywhere.md
+      - "It's Alive": 01-Theory/04-It's_Alive.md
   - Tips: 09-Tips/quoets.md
   - TODO: 10-TODO/01-2Sides3dRendering.md
 theme:

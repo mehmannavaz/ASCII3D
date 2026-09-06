@@ -1,3 +1,8 @@
+> **STATUS (v0.1.0):** implemented! Use `shade=True` (depth gradient) or
+> `fill='/'` (uniform texture) to get exactly this behaviour -- see the
+> [Usage](../02-Usage/00-usage.md#shading) page. The notes below are the
+> original design sketch.
+
 ```
 |         |||||
 |         |||||
