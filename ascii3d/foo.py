@@ -1,30 +1,29 @@
-import numpy as np
+"""Backwards compatible import path.
 
-class ascii:
-    def __init__(self, art):
-        self.art = art
-        self.length = art.count('\n')
-        self.width = max([len(line) for line in art.split('\n')])
-        self.matrix = np.zeros((self.turned_length, self.turned_width)) # Temporal
+Historically the engine lived in this module, which is why the name is
+``foo``.  The real implementation now lives in :mod:`ascii3d.engine`;
+    this module re-exports it so that ``from ascii3d.foo import ascii``
+    keeps working.
+"""
 
-    def turn_left_down(self):
-        pass
+from .engine import (  # noqa: F401
+    SHADE_RAMP,
+    Ascii3D,
+    ascii,
+    mirror,
+    normalize,
+    turn,
+    turn_left,
+    turn_right,
+)
 
-# Head (Top)
-counter = 1
-depth = 1
-for line in range(depth): # 3 depth
-    if counter == 1:
-        print("  " + " " * counter + "/", end="")
-    else:
-        print("  " + " " * counter + "/")
-    counter -= 1
-
-# Head (Front)
-counter = 0
-for line in Example2.replace("|", "\\").split("\n"):
-    if counter == 1: # First run/line:
-        print("  " * counter + "/" + line.replace(" ", "") + "/")
-    else:
-        print(" " * counter + line)
-    counter += 1
+__all__ = [
+    'SHADE_RAMP',
+    'Ascii3D',
+    'ascii',
+    'mirror',
+    'normalize',
+    'turn',
+    'turn_left',
+    'turn_right',
+]
