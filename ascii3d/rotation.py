@@ -1,17 +1,27 @@
-"""The 360 degree rotation: spin an ASCII art like a turntable.
+"""The 360 degree rotation: the *turned* box spinning on a turntable.
 
-The art is extruded into a 3D box (see :mod:`ascii3d.wireframe`) and
-rotated around a full circle, frame by frame.  The frames share one
-canvas so the object does not jump around, and you can
+The spin is a sequence of turned poses (:mod:`ascii3d.pose`), not a
+free-angle projection.  The camera stays ABOVE the box for the whole
+sweep -- every frame shows the top face receding DOWN and the depth
+marching down the side face, exactly like the hand-drawn turned view
+of the theory docs.  The flat, forward, "normal" view never appears;
+frame 0 *is* the docs' classic turn (45 degrees), i.e. the turned
+cube ``cube_turned``.
 
-* iterate over them (:func:`frames`),
+Every frame is drawn with single marching strokes (``|``, ``/``,
+``\\``, one character per row) and a shaded side face -- no character
+is ever stretched or doubled to fake depth.
+
+Use it as:
+
+* iterate over the frames (:func:`frames`),
 * watch them spin in the terminal (:func:`play`),
 * save them as text files (:func:`save_frames`), or
 * export an animated GIF (:func:`to_gif`, needs Pillow).
 
 Example:
     >>> from ascii3d.rotation import frames
-    >>> for frame in frames(' _\\n|_|', steps=4):
+    >>> for frame in frames(' _\\n|_|', steps=8):
     ...     print(frame)
     ...
 """
@@ -21,65 +31,50 @@ from __future__ import annotations
 import sys
 import time
 
-from .routes import _auto_depth
-from .wireframe import render_art as _render_art
+from .pose import render_pose as _render_pose
+from .pose import turntable_pose as _turntable_pose
 
-__all__ = ['SPIN_AXES', 'frames', 'mesh_frames', 'play',
-           'play_frames', 'save_frames', 'to_gif', 'mesh_to_gif']
-
-SPIN_AXES = ('y', 'x', 'z')
+__all__ = ['frames', 'play', 'play_frames', 'save_frames', 'to_gif',
+           'mesh_frames', 'mesh_to_gif']
 
 
-def frames(art: str, steps: int = 24, start: float = 0.0,
-           stop: float = 360.0, axis: str = 'y', pitch: float = 20.0,
-           depth: int | None = None, zoom: float = 1.0,
-           perspective: bool = True) -> list[str]:
-    """Render *art* spinning through a full circle.
+def frames(art: str, steps: int = 24, start: float = 45.0,
+           pitch: float = 30.0, depth: int | None = None,
+           shade: bool = True) -> list[str]:
+    """Render *art* spinning through a full circle of turned views.
 
-    The camera orbits around *axis*; *pitch* tips the camera down so
-    the top face stays visible during a turntable spin (axis ``'y'``).
+    The box yaws around the vertical axis while the camera keeps a
+    constant downward look (*pitch*): the top face is visible in
+    every frame and the depth always marches down -- the spin is
+    "only going down", never the flat forward view.  Frame 0 is the
+    docs' classic 45 degree turn (the turned cube).
 
     Args:
-        art: The ASCII art as a plain string.
+        art: The ASCII art as a plain string (the front face).
         steps: Number of frames in the sweep.
-        start: First angle, degrees.
-        stop: Last angle, degrees (360 for a full turn).
-        axis: Rotation axis: ``'y'`` (turntable), ``'x'`` (cartwheel)
-            or ``'z'`` (coin spin).
-        pitch: Constant camera elevation for axis ``'y'`` spins.
-        depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor.
-        perspective: Unused placeholder for API symmetry (the
-            wireframe camera is always weakly perspective).
+        start: Yaw of the first frame, degrees (45 = the docs'
+            turned look; the default starts the spin on the turn).
+        pitch: Constant downward look in degrees; above 40 the top
+            face grows taller.  The sign is forced positive -- the
+            camera never dips below the box.
+        depth: Depth of the 3D box (``None`` = auto, substantial
+            as the docs demand).
+        shade: Fill the side face with the depth gradient.
 
     Returns:
-        The list of frames, all padded to the same canvas size so
-        they can replace each other cleanly.
+        The list of frames, all padded to one canvas size so they
+        can replace each other cleanly in a terminal or GIF.
 
     Raises:
-        ValueError: If *axis* is unknown or *steps* is < 2.
+        ValueError: If *steps* is < 2.
     """
-    if axis not in SPIN_AXES:
-        raise ValueError(f'axis must be one of {SPIN_AXES}, '
-                         f'not {axis!r}')
     if steps < 2:
         raise ValueError('steps must be >= 2')
-    if depth is None:
-        depth = _auto_depth(art)
-
     raw = []
     for i in range(steps):
-        t = i / (steps - 1)
-        angle = start + (stop - start) * t
-        yaw = pitch_deg = roll = 0.0
-        if axis == 'y':
-            yaw, pitch_deg = angle, pitch
-        elif axis == 'x':
-            pitch_deg = angle
-        else:
-            roll = angle
-        raw.append(_render_art(art, yaw=yaw, pitch=pitch_deg, roll=roll,
-                               depth=depth, zoom=zoom))
+        theta = start + i * 360.0 / steps
+        pose = _turntable_pose(theta, pitch=pitch)
+        raw.append(_render_pose(art, pose, depth=depth, shade=shade))
     return _normalize_canvas(raw)
 
 
@@ -102,55 +97,6 @@ def _normalize_canvas(raw: list[str]) -> list[str]:
         lines = [' ' * width] * top + lines + [' ' * width] * bottom
         out.append('\n'.join(lines))
     return out
-
-
-def mesh_frames(vertices, edges, steps: int = 24, start: float = 0.0,
-                stop: float = 360.0, axis: str = 'y', pitch: float = 20.0,
-                scale: float | None = None, zoom: float = 1.0
-                ) -> list[str]:
-    """Render a theoretic mesh spinning through a full circle.
-
-    The 360 degree counterpart of :func:`frames` for the meshes of
-    :mod:`ascii3d.theory` (or any vertices + edges pair).
-
-    Args:
-        vertices: ``(n, 3)`` array of vertex positions (math units).
-        edges: ``(i, j)`` index pairs.
-        steps: Number of frames in the sweep.
-        start: First angle, degrees.
-        stop: Last angle, degrees.
-        axis: Rotation axis: ``'y'``, ``'x'`` or ``'z'``.
-        pitch: Constant camera elevation for axis ``'y'`` spins.
-        scale: Mesh size in character cells.
-        zoom: Extra scale factor.
-
-    Returns:
-        The frames, all padded to one canvas size.
-
-    Raises:
-        ValueError: If *axis* is unknown or *steps* is < 2.
-    """
-    from .wireframe import render_mesh
-    if axis not in SPIN_AXES:
-        raise ValueError(f'axis must be one of {SPIN_AXES}, '
-                         f'not {axis!r}')
-    if steps < 2:
-        raise ValueError('steps must be >= 2')
-    raw = []
-    for i in range(steps):
-        t = i / (steps - 1)
-        angle = start + (stop - start) * t
-        yaw = pitch_deg = roll = 0.0
-        if axis == 'y':
-            yaw, pitch_deg = angle, pitch
-        elif axis == 'x':
-            pitch_deg = angle
-        else:
-            roll = angle
-        raw.append(render_mesh(vertices, edges, yaw=yaw,
-                               pitch=pitch_deg, roll=roll, scale=scale,
-                               zoom=zoom))
-    return _normalize_canvas(raw)
 
 
 def play_frames(timeline: list[str], fps: float = 10.0, loops: int = 1,
@@ -193,30 +139,28 @@ def play_frames(timeline: list[str], fps: float = 10.0, loops: int = 1,
 
 
 def play(art: str, steps: int = 24, fps: float = 10.0,
-         axis: str = 'y', pitch: float = 20.0,
-         depth: int | None = None, zoom: float = 1.0,
-         loops: int = 1, stream=None) -> None:
+         pitch: float = 30.0, depth: int | None = None,
+         shade: bool = True, loops: int = 1, stream=None) -> None:
     """Play the 360 degree rotation of *art* in the terminal.
 
     Args:
         art: The ASCII art as a plain string.
         steps: Number of frames in the sweep.
         fps: Frames per second.
-        axis: See :func:`frames`.
-        pitch: Camera elevation for turntable spins.
+        pitch: Constant downward look, degrees (see :func:`frames`).
         depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor.
+        shade: Fill the side face with the depth gradient.
         loops: How many full sweeps to play (``-1`` = forever).
         stream: Writable stream (defaults to ``sys.stdout``).
     """
-    timeline = frames(art, steps=steps, axis=axis, pitch=pitch,
-                      depth=depth, zoom=zoom)
+    timeline = frames(art, steps=steps, pitch=pitch, depth=depth,
+                      shade=shade)
     play_frames(timeline, fps=fps, loops=loops, stream=stream)
 
 
 def save_frames(art: str, prefix: str, steps: int = 24,
-                axis: str = 'y', pitch: float = 20.0,
-                depth: int | None = None, zoom: float = 1.0) -> list[str]:
+                pitch: float = 30.0, depth: int | None = None,
+                shade: bool = True) -> list[str]:
     """Save every rotation frame to a numbered text file.
 
     Args:
@@ -224,17 +168,16 @@ def save_frames(art: str, prefix: str, steps: int = 24,
         prefix: File path prefix; frames become ``prefix000.txt``,
             ``prefix001.txt``, ...
         steps: Number of frames in the sweep.
-        axis: See :func:`frames`.
-        pitch: Camera elevation for turntable spins.
+        pitch: Constant downward look, degrees.
         depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor.
+        shade: Fill the side face with the depth gradient.
 
     Returns:
         The list of file paths written.
     """
     paths = []
-    for i, frame in enumerate(frames(art, steps=steps, axis=axis,
-                                     pitch=pitch, depth=depth, zoom=zoom)):
+    for i, frame in enumerate(frames(art, steps=steps, pitch=pitch,
+                                     depth=depth, shade=shade)):
         path = f'{prefix}{i:03d}.txt'
         with open(path, 'w', encoding='utf-8') as handle:
             handle.write(frame + '\n')
@@ -257,8 +200,8 @@ def _save_gif(timeline: list[str], path: str, fps: float = 10.0,
 
 
 def to_gif(art: str, path: str, steps: int = 24, fps: float = 10.0,
-           axis: str = 'y', pitch: float = 20.0, depth: int | None = None,
-           zoom: float = 1.0, font_size: int = 14) -> str:
+           pitch: float = 30.0, depth: int | None = None,
+           shade: bool = True, font_size: int = 14) -> str:
     """Export the 360 degree rotation of *art* as an animated GIF.
 
     Each frame is drawn with a monospaced font on a dark background,
@@ -269,10 +212,9 @@ def to_gif(art: str, path: str, steps: int = 24, fps: float = 10.0,
         path: Output file path (``.gif``).
         steps: Number of frames in the sweep.
         fps: Frames per second.
-        axis: See :func:`frames`.
-        pitch: Camera elevation for turntable spins.
+        pitch: Constant downward look, degrees.
         depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor.
+        shade: Fill the side face with the depth gradient.
         font_size: Glyph size in pixels.
 
     Returns:
@@ -281,11 +223,63 @@ def to_gif(art: str, path: str, steps: int = 24, fps: float = 10.0,
     Raises:
         ImportError: If Pillow is not installed.
     """
-    from .raster import text_to_image  # noqa: F401  (optional dep guard)
-
-    timeline = frames(art, steps=steps, axis=axis, pitch=pitch,
-                      depth=depth, zoom=zoom)
+    timeline = frames(art, steps=steps, pitch=pitch, depth=depth,
+                      shade=shade)
     return _save_gif(timeline, path, fps=fps, font_size=font_size)
+
+
+# ----------------------------------------------------------------------
+# theoretic meshes keep the wireframe camera (they are not boxes)
+# ----------------------------------------------------------------------
+def mesh_frames(vertices, edges, steps: int = 24, start: float = 0.0,
+                stop: float = 360.0, axis: str = 'y', pitch: float = 20.0,
+                scale: float | None = None, zoom: float = 1.0
+                ) -> list[str]:
+    """Render a theoretic mesh spinning through a full circle.
+
+    The 360 degree counterpart of :func:`frames` for the meshes of
+    :mod:`ascii3d.theory` (or any vertices + edges pair), rendered
+    with the wireframe camera of :mod:`ascii3d.wireframe`.
+
+    Args:
+        vertices: ``(n, 3)`` array of vertex positions (math units).
+        edges: ``(i, j)`` index pairs.
+        steps: Number of frames in the sweep.
+        start: First angle, degrees.
+        stop: Last angle, degrees.
+        axis: Rotation axis: ``'y'`` (turntable), ``'x'`` (cartwheel)
+            or ``'z'`` (coin spin).
+        pitch: Constant camera elevation for axis ``'y'`` spins.
+        scale: Mesh size in character cells.
+        zoom: Extra scale factor.
+
+    Returns:
+        The frames, all padded to one canvas size.
+
+    Raises:
+        ValueError: If *axis* is unknown or *steps* is < 2.
+    """
+    from .wireframe import render_mesh
+    if axis not in ('y', 'x', 'z'):
+        raise ValueError(f"axis must be one of ('y', 'x', 'z'), "
+                         f'not {axis!r}')
+    if steps < 2:
+        raise ValueError('steps must be >= 2')
+    raw = []
+    for i in range(steps):
+        t = i / (steps - 1)
+        angle = start + (stop - start) * t
+        yaw = pitch_deg = roll = 0.0
+        if axis == 'y':
+            yaw, pitch_deg = angle, pitch
+        elif axis == 'x':
+            pitch_deg = angle
+        else:
+            roll = angle
+        raw.append(render_mesh(vertices, edges, yaw=yaw,
+                               pitch=pitch_deg, roll=roll, scale=scale,
+                               zoom=zoom))
+    return _normalize_canvas(raw)
 
 
 def mesh_to_gif(vertices, edges, path: str, steps: int = 24,
@@ -301,7 +295,7 @@ def mesh_to_gif(vertices, edges, path: str, steps: int = 24,
         steps: Number of frames in the sweep.
         fps: Frames per second.
         axis: See :func:`mesh_frames`.
-        pitch: Camera elevation for turntable spins.
+        pitch: Constant camera elevation for turntable spins.
         scale: Mesh size in character cells.
         zoom: Extra scale factor.
         font_size: Glyph size in pixels.
