@@ -17,22 +17,33 @@ have been sketching by hand since day one, now done automatically.
                \______\/                       \/______/
 ```
 
-New in the `9-routes` line: view the art from **nine directions**,
-spin it a full **360 degrees**, draw **theoretic** (mathematical)
-shapes, and generate or analyse arts with a **vision language
-model**:
+New in the `pose` line: view the art from **nine directions**,
+spin the *turned* cube a full **360 degrees** (the camera always
+above the box, the depth always marching down -- never the flat
+forward view), draw **theoretic** (mathematical) shapes, and
+generate or analyse arts with a **vision language model**:
 
 ```
--- leftup --   -- up --   -- rightup --
- _/\           |_|        /\__
-____           __|        ____
+cube_turned_spin.gif, four of the 24 frames:
 
--- left --   -- center --   -- right --
-  __          _              __
- / /\        |_|            /\ \
-/_/ /                       \ \_\
-\_\/                         \/_/
+   _______             _______           _______            _______
+  /      /\           /      /\         /\      \          /      /\
+ /      /  \         /      /  \       /  \      \        /      /  \
+/______/    \       ______ /    \     /    \______\      / ______   \
+\ _  _ \. X /             \. : #/     \ X ./ _  _ /       | _  _ |: /
+ \\_\\_\\: /               \. X/       \ ://_//_//         ||_||_||/
+  \______\/                 \ /         \/______/          |______|
+
+   45 degrees        90: edge on,      225: the back,     337: coming
+   (the docs'        the art hides     shows the          back around,
+   classic turn,     behind the box    mirrored art       still turned
+   = cube_turned)                      (LookAnywhere)     -- never flat
 ```
+
+
+Every frame is drawn with single marching strokes (`|`, `/`, `\`,
+one character per row) and a shaded side face -- no character is
+ever stretched or doubled to fake depth.
 
 ## Installation:
 ### PyPi(TODO):
@@ -97,8 +108,8 @@ print(route(' _\n|_|', 'leftup'))
 
 # the 360 degree rotation
 from ascii3d.rotation import frames, play, to_gif
-timeline = frames(art.art, steps=24)   # every frame, same canvas
-play(art.art, fps=10)                  # terminal animation
+timeline = frames(art.art, steps=24)   # turned frames, same canvas
+play(art.art, fps=10)                  # terminal animation (camera above)
 to_gif(art.art, 'spin.gif')            # animated GIF
 ```
 
@@ -164,15 +175,19 @@ The whole theory lives in the `docs/` folder (start with
 4. **Close the silhouette** -- the visible side face (right one when
    turning left) is drawn with `\` edges and can be shaded by depth.
 
-The new features add a second engine under the same roof:
-`ascii3d.wireframe` parses the strokes into 3D segments
-(`_`, `|`, `/`, `\`), extrudes the art into a box closed by its convex
-hull, rotates it with real yaw/pitch matrices, and rasterizes the
-segments back into the same four stroke characters -- with a
-hidden-line mask so the front face stays opaque, exactly like the
-hand-drawn boxes. The nine routes, the 360 rotation, and the theoretic
-meshes all ride on this renderer; the routes `left`/`right` still use
-the classic shear so the doc examples stay byte-identical.
+The new features add a second renderer under the same roof:
+`ascii3d.pose` -- the *box camera* -- generalises the docs' shear to
+any viewing angle with three grid numbers (`lean`, `rise`, `reach`),
+draws every face between computed corner points with one-character
+marching strokes, and shades the side face with the depth gradient
+of the `2Sides3dRendering` TODO. At the classic 45 degree pose it is
+**byte-identical** to the engine above (verified by the test suite
+for every example art). The nine routes, the 360 rotation and the
+spins all ride on this renderer; the routes `left`/`right` still use
+the classic shear so the doc examples stay byte-identical. The
+theoretic meshes keep their own wireframe camera
+(`ascii3d.wireframe`), which parses strokes into real 3D segments
+and rotates them with yaw/pitch matrices.
 
 The size formulas from the theory docs hold:
 
@@ -193,9 +208,10 @@ art.turned_width               # width  + length - 1 = 4
 | `turn(art, direction, ...)` | module level shortcut |
 | `mirror(art)` | horizontal mirror (swaps `/` `\` and brackets) |
 | `route(art, direction, ...)` | one of the **nine routes** (leftup ... rightdown) |
+| `render_pose(art, pose)` / `Pose(...)` | the box camera at any angle |
 | `nine_routes(art)` | dict of all nine route renders |
 | `contact_sheet(art)` | the labelled 3x3 gallery |
-| `frames(art, steps=24, axis='y')` | the 360 rotation frames |
+| `frames(art, steps=24, pitch=30)` | the 360 rotation of the *turned* view |
 | `play(art)` / `play_frames(timeline)` | terminal animation |
 | `to_gif(art, 'spin.gif')` | animated GIF export (Pillow) |
 | `MESHES` / `render('torus')` | theoretic meshes and their renders |
@@ -206,7 +222,7 @@ art.turned_width               # width  + length - 1 = 4
 ## Development
 ```shell
 pip install -r requirements.txt
-pytest                 # 164 tests, including golden outputs from the docs
+pytest                 # 226 tests, including golden outputs from the docs
 python -m ascii3d --demo
 python -m ascii3d --nine -e roomy
 mkdocs serve           # preview the documentation

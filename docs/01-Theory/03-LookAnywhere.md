@@ -1,9 +1,10 @@
 # Look Anywhere
 
-> **STATUS (v0.2.0):** implemented! The nine routes are live:
+> **STATUS (v0.3.0):** implemented! The nine routes are live:
 > `route(art, 'leftup')` and friends -- see the
-> [Routes](../02-Usage/01-routes.md) usage page. The notes below are the
-> original theory sketch, now backed by a real renderer.
+> [Routes](../02-Usage/01-routes.md) usage page. The notes below are
+> the original theory sketch, now backed by the box camera renderer
+> (`ascii3d/pose.py`).
 
 The idea: a turned art is a box seen from one side. But a box can be
 seen from **nine** interesting directions -- the eight compass points
@@ -18,38 +19,70 @@ leftdown  down     rightdown
 ## Up and Down
 
 The same trick that turns an art left/right also works vertically:
-instead of shearing the *rows* sideways, shear the *columns* up or
-down. Looking down on an art shows its **top face** dominating the
-frame; looking up shows the bottom face. In the engine this is done
-with a true 3D camera (see `ascii3d/wireframe.py`) rather than a
-shear, because a vertical shear would collide with the half-height
-raster of the `_` strokes.
+instead of marching the *rows* sideways, the *depth* of the box
+recedes up (looking down) or down (looking up from below). Looking
+down on an art shows its **top face** dominating the frame; looking
+up shows the bottom face. Every stroke stays a single character and
+the side faces keep the marching look of the classic turn:
 
 ```
- ____________          __________
-|           /|        //        \\
-\____________/         ____________
- \          /         |__________|
- \__________/         |          |
-   up (roomy,           down (roomy,
-   depth 3)             depth 3)
+         ___________
+        /          /
+       /          /
+      /          /
+     /          /
+    /          /
+   /          / \
+  /          /   \
+ __________ /     \
+\          \. : X #\
+ \          \. : X /
+  \          \. X /
+   \          \: /
+    \__________\/
+  leftup (roomy)
+
+ __________
+|          |
+ |          |
+ |          |
+  |          |
+  |__________|\
+   \           \
+    \           \
+    \           \
+     \           \
+      \           \
+       \           \
+       \           \
+        |__________|\
+  down (roomy)
 ```
 
 ## Down Left / Down Right / Up Left / Up Right
 
 The diagonals combine a horizontal and a vertical gaze; the camera
-sits on the corresponding corner of the 3x3 grid above. The wireframe
-renderer extrudes the art into a box, rotates it to the corner angle
-and masks the hidden lines behind the opaque front face, which keeps
-the hand-drawn look of the two-face closure:
+sits on the corresponding corner of the 3x3 grid above. The box
+camera draws the turned front face plus a taller top face (or a
+bottom face, seen from below) and the shaded side wall, all with
+single marching strokes:
 
 ```
- ________/              /\_______
-_________\\\           //\\     \\
-___     ___ \          \\ \\      \\
-   ___     ___\          \ \\ ________
-      _________/          \//______/
-  leftup (roomy)         rightdown (roomy)
+         ___________
+        /          /
+       /          /
+      /          /
+     /          /
+    /          /
+   /          / \
+  /          /   \
+ __________ /     \
+\  __  __  \. : X #\
+ \ \  \\  \ \. : X /
+  \ \__\\__\ \. X /
+   \          \: /
+    \__________\/
+  leftup (head)
 ```
 
 ## Behind
@@ -58,4 +91,5 @@ Looking at the art from the back is the one route the shear trick
 cannot fake (the engine would need to mirror the strokes *and* swap
 the faces). The 360 degree rotation
 (`ascii3d.rotation.frames`) passes through the behind view naturally
-as the turntable sweeps, which is the honest way to see it.
+as the turntable sweeps -- the back half of the spin shows the
+dotted back face of the box, the honest way to see it.

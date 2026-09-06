@@ -1,9 +1,17 @@
 # The 360 degree rotation
 
-The full answer to *"look anywhere"*: spin the art around a whole
-circle. The art is extruded into a 3D box and rotated frame by frame
-on a turntable, and every frame shares one canvas size so the
-animation is steady.
+The full answer to *"look anywhere"*: spin the turned art around a
+whole circle. The spin is a sequence of **turned poses**
+(`ascii3d/pose.py`), not a free-angle projection:
+
+* the camera stays **above** the box for the whole sweep -- the top
+  face is visible in every frame and the depth always marches
+  **down** the side face ("only going down", never looking up),
+* the flat, forward, "normal" view never appears -- near face-on
+  the box keeps a gentle half lean and a visible top face,
+* frame 0 **is** the docs' classic turn, i.e. `cube_turned`,
+* every stroke is a single character (`|`, `/`, `\`, one per row)
+  and the side face carries the depth gradient.
 
 ```python
 from ascii3d.rotation import frames, play, to_gif, save_frames
@@ -11,34 +19,64 @@ from ascii3d.examples import EXAMPLES
 
 roomy = EXAMPLES['roomy']
 
-timeline = frames(roomy, steps=24)     # 24 frames around 360 degrees
+timeline = frames(roomy, steps=24)     # 24 turned frames around 360
 play(roomy, steps=24, fps=10)          # watch it spin in the terminal
 save_frames(roomy, 'spin', steps=24)   # spin000.txt, spin001.txt, ...
 to_gif(roomy, 'spin.gif', steps=24)    # animated GIF (needs Pillow)
 ```
 
-## Axes
+## What a spin looks like
 
-The turntable is not the only dance move:
+Four frames of the cube spin (of sixteen, starting on the classic
+turn):
+
+```python
+from ascii3d.rotation import frames
+from ascii3d.examples import EXAMPLES
+
+timeline = frames(EXAMPLES['cube'], steps=16)
+for i in (0, 2, 8, 15):        # the turn, edge-on, the back, the return
+    print(timeline[i])
+```
+```
+   _______             _______           _______            _______
+  /      /\           /      /\         /\      \          /      /\
+ /      /  \         /      /  \       /  \      \        /      /  \
+/______/    \       ______ /    \     /    \______\      / ______   \
+\ _  _ \. X /             \. : #/     \ X ./ _  _ /       | _  _ |: /
+ \\_\\_\\: /               \. X/       \ ://_//_//         ||_||_||/
+  \______\/                 \ /         \/______/          |______|
+```
+
+The art is visible for the front half of the sweep (turned, never
+flat), hides behind the box at edge-on, and the back half shows the
+art's mirrored strokes -- the "mirror the strokes and swap the
+faces" back view of `01-Theory/03-LookAnywhere.md`.
+
+## Options
+
+| Argument | Meaning |
+|----------|---------|
+| `steps` | number of frames (default 24) |
+| `start` | yaw of the first frame in degrees (default 45 = the docs' turn) |
+| `pitch` | constant downward look, degrees (default 30; above 40 the top face grows) |
+| `depth` | box depth (`None` = auto, substantial) |
+| `shade` | fill the side face with the depth gradient (default on) |
+
+```python
+to_gif(EXAMPLES['cube'], 'cube_turned_spin.gif', steps=24, fps=12)
+```
+
+## Meshes spin too
+
+The theoretic arts ([theoretic](04-theoretic.md)) rotate with the
+wireframe camera and support the extra axes:
 
 | Axis | Motion |
 |------|--------|
 | `'y'` | turntable (default) |
 | `'x'` | cartwheel |
 | `'z'` | coin spin |
-
-```python
-play(roomy, axis='x', steps=24)   # end-over-end
-play(roomy, axis='z', steps=24)   # flat spin
-```
-
-The `pitch` argument tips the camera down (default 20 degrees) so
-the top face stays visible during a turntable spin.
-
-## Meshes spin too
-
-The theoretic arts ([theoretic](04-theoretic.md)) rotate with the
-same machinery:
 
 ```python
 from ascii3d.rotation import mesh_frames, mesh_to_gif
@@ -52,11 +90,8 @@ mesh_to_gif(torus.vertices, torus.edges, 'torus.gif', steps=36)
 ## Command line
 
 ```shell
-ascii3d --spin -e roomy              # 24-frame terminal spin
-ascii3d --spin 60 --fps 15 -e roomy  # longer, faster
-ascii3d --gif spin.gif -e roomy      # animated GIF instead
-ascii3d --theoretic torus --spin     # spin a theoretic art
+ascii3d --spin -e roomy              # spin in the terminal
+ascii3d --gif spin.gif -e roomy      # ...or export a GIF
+ascii3d --spin -e cube --pitch 50    # a taller top face
+ascii3d --theoretic torus --spin     # the theoretic meshes spin too
 ```
-
-The GIF is drawn with a monospaced font on a dark background,
-exactly like the terminal would show it.
