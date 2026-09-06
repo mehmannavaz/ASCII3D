@@ -50,7 +50,8 @@ Example4 = """
 |______|
 """
 
-ALL_EXAMPLES = [Example1, Example2, Example3, Example4] + list(EXAMPLES.values())
+ALL_EXAMPLES = ([Example1, Example2, Example3, Example4]
+                + list(EXAMPLES.values()))
 
 
 def test_answer():

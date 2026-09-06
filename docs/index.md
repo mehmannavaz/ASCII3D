@@ -33,9 +33,21 @@ print(turn(" _\n|_|", depth=2, side=False))
 \_\
 ```
 
-Check the [Usage](02-Usage/00-usage.md) page for the full API (turning
-right, shading the side face, the command line interface), and the
-[Theory](01-Theory/00-SimpleGaze.md) section for how it all works.
+Check the [Usage](02-Usage/00-usage.md) pages for the full API --
+turning right, shading the side face, the command line interface --
+plus the new features: the [nine routes](02-Usage/01-routes.md), the
+[360 degree rotation](02-Usage/02-rotation.md), [VLM
+arts](02-Usage/03-vlm.md) and [theoretic arts](02-Usage/04-theoretic.md).
+The [Theory](01-Theory/00-SimpleGaze.md) section explains how it all
+works.
+
+```python
+from ascii3d import route
+from ascii3d.rotation import play
+
+print(route(" _\n|_|", "leftup"))   # look from the top-left corner
+play(" _\n|_|", steps=12)           # spin it a full 360 degrees
+```
 
 ## What's next?
 You can continue this documentation with the `Next` button.

@@ -142,7 +142,8 @@ class ascii:  # noqa: N801 - kept for backwards compatibility with 0.0.1
         self.lines = normalize(art)
         self.length = len(self.lines)
         self.width = len(self.lines[0])
-        self.matrix = np.array([list(line) for line in self.lines], dtype='<U1')
+        self.matrix = np.array(
+            [list(line) for line in self.lines], dtype='<U1')
         # Formulas from docs/01-Theory/02-HowToTurn.md (for depth = 1).
         self.turned_length = self.length + 1
         self.turned_width = self.width + self.length - 1
@@ -226,7 +227,9 @@ class ascii:  # noqa: N801 - kept for backwards compatibility with 0.0.1
             return self.turn_left(depth, side, shade, fill)
         if direction == 'right':
             return self.turn_right(depth, side, shade, fill)
-        raise ValueError(f"direction must be 'left' or 'right', not {direction!r}")
+        raise ValueError(
+            f"direction must be 'left' or 'right', "
+            f'not {direction!r}')
 
     # Convenient alias.
     render = turn
@@ -373,7 +376,8 @@ def _turn_left(lines: list[str], depth: int, side: bool,
                     else:
                         z = ((gamma - rho) - (width - d - 2)) / 2
                         z = max(1, int(z + 0.5))
-                        idx = round((z - 1) / max(1, d - 1) * (len(SHADE_RAMP) - 1))
+                        ramp = max(1, d - 1) * (len(SHADE_RAMP) - 1)
+                        idx = round((z - 1) / ramp) if ramp else 0
                         ch = SHADE_RAMP[min(len(SHADE_RAMP) - 1, max(0, idx))]
                     put(rho, gamma, ch, protect=True)
 

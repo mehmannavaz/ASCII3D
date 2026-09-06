@@ -1,7 +1,12 @@
 site_name: ASCII3D
 nav:
   - Home: index.md
-  - Usage: 02-Usage/00-usage.md
+  - Usage:
+      - Turning: 02-Usage/00-usage.md
+      - The nine routes: 02-Usage/01-routes.md
+      - 360 degree rotation: 02-Usage/02-rotation.md
+      - VLM arts: 02-Usage/03-vlm.md
+      - Theoretic arts: 02-Usage/04-theoretic.md
   - Theory:
       - Simple Gaze: 01-Theory/00-SimpleGaze.md
       - Simple Head: 01-Theory/01-SImpleHead.md
