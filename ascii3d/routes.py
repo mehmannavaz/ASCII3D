@@ -1,82 +1,75 @@
 """The nine routes: view an ASCII art from every direction.
 
 A "route" is where you stand while looking at the art.  The 3x3 grid
-of routes (this is the nine the ``docs/01-Theory/03-LookAnywhere.md``
-sketch was reaching for)::
+of routes (the idea sketched in ``docs/01-Theory/03-LookAnywhere.md``)::
 
     leftup     up      rightup
     left     center    right
     leftdown  down     rightdown
 
-Two rendering styles cooperate:
+Two renderers cooperate:
 
 * **left / right** reuse the classic engine shear
-  (:func:`ascii3d.engine.turn`) -- the exact look of the hand drawn
+  (:func:`ascii3d.engine.turn`) -- byte-exact against the hand drawn
   theory docs.
-* **up / down / the four diagonals and center** use the true 3D
-  wireframe of :mod:`ascii3d.wireframe`: the art is extruded into a
-  box and the camera moves to the requested compass position.
+* **the other seven** use the box camera (:mod:`ascii3d.pose`): the
+  art is the front face of a box and the camera sits at the
+  requested compass position -- every face drawn with single
+  marching strokes, the side face shaded with the depth gradient.
 
 Direction convention (matching the engine): ``left`` means the *art
 turns to the left*, so its right side face becomes visible -- exactly
-like ``ascii3d.turn(art, 'left')``.  ``up`` means we look down on the
-art and see its top face, ``down`` looks at it from below.
+like ``ascii3d.turn(art, 'left')``.  ``up`` looks down on the art from
+above (the top face dominating the frame), ``down`` looks up from
+below (the bottom face visible underneath).
 
 Example:
     >>> from ascii3d import route, nine_routes
+    >>> sheet = nine_routes(' _\\n|_|')   # dict of all nine views
     >>> print(route(' _\\n|_|', 'leftup'))
     ...
-    >>> sheet = nine_routes(' _\\n|_|')   # dict of all nine views
 """
 
 from __future__ import annotations
 
 from .engine import turn as _engine_turn
-from .wireframe import render_art as _render_art
+from .pose import Pose, auto_depth as _auto_depth, render_pose
 
 __all__ = ['ROUTES', 'route', 'nine_routes', 'contact_sheet']
 
-# (yaw, pitch) camera angles for the wireframe routes, degrees.
-# yaw: turntable rotation (negative = art turns left, right face
-# shows, like the engine's turn_left); pitch: positive looks down on
-# the top face.
-_WIRE_ANGLES = {
-    'center': (0, 0),
-    'up': (0, 65),
-    'down': (0, -65),
-    'leftup': (-45, 62),
-    'leftdown': (-45, -45),
-    'rightup': (45, 62),
-    'rightdown': (45, -45),
-}
-
+#: The nine routes in reading order of the 3x3 grid.
 ROUTES = ('leftup', 'up', 'rightup', 'left', 'center', 'right',
           'leftdown', 'down', 'rightdown')
 
-
-def _auto_depth(art: str) -> int:
-    """A depth that scales with the art (bigger art, deeper box)."""
-    rows = [line for line in art.split('\n') if line.strip()]
-    length = len(rows)
-    return max(2, min(4, length // 2))
+#: The box-camera pose for each route (left/right use the engine's
+#: byte-exact shear instead).  'center' is the straight-on view with
+#: the top face receding down -- every cell of the 3x3 gallery is a
+#: 3D view, none is the flat 2D art.
+ROUTE_POSES = {
+    'center': Pose(lean=0.5, rise=1, side='none', reach=0.5),
+    'up': Pose(lean=0.5, rise=2, side='none', reach=1.0),
+    'down': Pose(lean=0.5, rise=-2, side='none', reach=1.0),
+    'leftup': Pose(lean=1.0, rise=2, side='right', reach=1.0),
+    'rightup': Pose(lean=1.0, rise=2, side='left', reach=1.0),
+    'leftdown': Pose(lean=1.0, rise=-2, side='right', reach=1.0),
+    'rightdown': Pose(lean=1.0, rise=-2, side='left', reach=1.0),
+}
 
 
 def route(art: str, direction: str = 'center', depth: int | None = None,
-          zoom: float = 1.0, style: str = 'auto') -> str:
+          style: str = 'auto') -> str:
     """Render *art* viewed from one of the nine routes.
 
     Args:
         art: The ASCII art as a plain string.
-        direction: One of :data:`ROUTES` -- ``left``, ``right``,
-            ``up``, ``down``, ``leftup``, ``leftdown``, ``rightup``,
-            ``rightdown`` or ``center``.
+        direction: One of :data:`ROUTES`.
         depth: Depth of the 3D box.  ``None`` picks a depth that
-            matches the art size.
-        zoom: Scale factor for the wireframe routes.
+            scales with the art (substantial, as the docs demand).
         style: ``'auto'`` uses the engine shear for left/right and
-            the 3D wireframe everywhere else; ``'engine'`` and
-            ``'wire'`` force one style (``'engine'`` only supports
-            left/right/center).
+            the box camera everywhere else; ``'engine'`` and
+            ``'pose'`` force one renderer (``'engine'`` only
+            supports left/right/center).  ``'wire'`` is an alias
+            for ``'pose'`` (the old wireframe name).
 
     Returns:
         The rendered ASCII art.
@@ -87,42 +80,42 @@ def route(art: str, direction: str = 'center', depth: int | None = None,
     if direction not in ROUTES:
         raise ValueError(
             f'direction must be one of {ROUTES}, not {direction!r}')
-    if style not in ('auto', 'engine', 'wire'):
-        raise ValueError(f"style must be 'auto', 'engine' or 'wire', "
+    if style not in ('auto', 'engine', 'pose', 'wire'):
+        raise ValueError(f"style must be 'auto', 'engine' or 'pose', "
                          f'not {style!r}')
 
-    if depth is None:
-        depth = _auto_depth(art)
-
-    if style in ('auto', 'engine') and direction in ('left', 'right'):
-        return _engine_turn(art, direction=direction, depth=depth)
+    if direction in ('left', 'right'):
+        if style == 'pose':
+            # the mirrored turn as a pose (same look, pose pipeline)
+            lean = 1.0 if direction == 'left' else -1.0
+            side = 'right' if direction == 'left' else 'left'
+            return render_pose(art, Pose(lean=lean, rise=1, side=side,
+                                         reach=1.0), depth=depth)
+        return _engine_turn(art, direction=direction, depth=depth or
+                            _auto_depth(art))
 
     if direction == 'center':
         if style == 'engine':
             return '\n'.join(line.rstrip() for line in
                              art.strip('\n').split('\n'))
-        # A little 3D frame around the plain art.
-        return _render_art(art, yaw=0, pitch=0, depth=depth,
-                           zoom=zoom)
+        # the straight-on view with the top face going down
+        return render_pose(art, ROUTE_POSES['center'], depth=depth)
 
     if style == 'engine':
         raise ValueError(
             "the 'engine' style only supports left/right/center; "
-            'use style="wire" or "auto" for the other routes')
+            'use style="pose" or "auto" for the other routes')
 
-    yaw, pitch = _WIRE_ANGLES[direction]
-    return _render_art(art, yaw=yaw, pitch=pitch, depth=depth, zoom=zoom)
+    return render_pose(art, ROUTE_POSES[direction], depth=depth)
 
 
 def nine_routes(art: str, depth: int | None = None,
-                zoom: float = 1.0, style: str = 'auto'
-                ) -> dict[str, str]:
+                style: str = 'auto') -> dict[str, str]:
     """Render *art* from all nine routes at once.
 
     Args:
         art: The ASCII art as a plain string.
         depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor for the wireframe routes.
         style: See :func:`route`.
 
     Returns:
@@ -130,13 +123,11 @@ def nine_routes(art: str, depth: int | None = None,
         reading order of the 3x3 route grid (leftup, up, rightup,
         left, center, ...).
     """
-    if depth is None:
-        depth = _auto_depth(art)
-    return {name: route(art, name, depth=depth, zoom=zoom, style=style)
+    return {name: route(art, name, depth=depth, style=style)
             for name in ROUTES}
 
 
-def contact_sheet(art: str, depth: int | None = None, zoom: float = 1.0,
+def contact_sheet(art: str, depth: int | None = None,
                   style: str = 'auto', gap: int = 3) -> str:
     """Render all nine routes as one labelled 3x3 gallery.
 
@@ -149,32 +140,38 @@ def contact_sheet(art: str, depth: int | None = None, zoom: float = 1.0,
     Args:
         art: The ASCII art as a plain string.
         depth: Depth of the 3D box (``None`` = auto).
-        zoom: Scale factor for the wireframe routes.
         style: See :func:`route`.
         gap: Blank columns between the gallery cells.
 
     Returns:
         The contact sheet as a single string.
     """
-    routes = nine_routes(art, depth=depth, zoom=zoom, style=style)
+    routes = nine_routes(art, depth=depth, style=style)
     order = [('leftup', 'up', 'rightup'),
              ('left', 'center', 'right'),
              ('leftdown', 'down', 'rightdown')]
-    lines: list[str] = []
+    # One width per gallery column (the widest cell of that column),
+    # so every line of the sheet has the same length.
+    col_width = [0, 0, 0]
+    cells_by_row = []
     for row_routes in order:
         cells = []
-        for name in row_routes:
+        for i, name in enumerate(row_routes):
             cell = routes[name].split('\n')
-            label = f'-- {name} --'.ljust(
-                max(len(line) for line in cell))
-            cells.append([label] + cell)
+            label = f'-- {name} --'
+            cell = [label] + cell
+            cells.append(cell)
+            col_width[i] = max(col_width[i],
+                               max(len(line) for line in cell))
         height = max(len(cell) for cell in cells)
-        for cell in cells:
-            width = max(len(line) for line in cell)
-            cell.extend([' ' * width] * (height - len(cell)))
-        for i in range(height):
-            cell_width = max(len(line) for line in cell)
+        for i, cell in enumerate(cells):
+            cell.extend([' ' * col_width[i]] * (height - len(cell)))
+        cells_by_row.append(cells)
+    lines: list[str] = []
+    for cells in cells_by_row:
+        for i in range(len(cells[0])):
             lines.append((' ' * gap).join(
-                cell[i].ljust(cell_width) for cell in cells))
+                cell[i].ljust(width)
+                for cell, width in zip(cells, col_width)))
         lines.append('')
     return '\n'.join(lines).rstrip('\n')
