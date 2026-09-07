@@ -26,18 +26,19 @@ generate or analyse arts with a **vision language model**:
 ```
 cube_turned_spin.gif, four of the 24 frames:
 
-   _______             _______           _______            _______
-  /      /\           /      /\         /\      \          /      /\
- /      /  \         /      /  \       /  \      \        /      /  \
-/______/    \       ______ /    \     /    \______\      / ______   \
-\ _  _ \. X /             \. : #/     \ X ./ _  _ /       | _  _ |: /
- \\_\\_\\: /               \. X/       \ ://_//_//         ||_||_||/
-  \______\/                 \ /         \/______/          |______|
+   _______         _______         _______         _______    
+  /      /\       /\      \       /      /\       /\      \   
+ /      /. \     / .\      \     /      /. \     / .\      \  
+/______/. : \   / : .\______\   /______/. : \   / : .\______\ 
+\ _  _ \. : /   \ : ./ _  _ /   \ _  _ \. : /   \ : ./ _  _ / 
+ \\_\\_\\. /     \ .//_//_//     \\_\\_\\. /     \ .//_//_//  
+  \______\/       \/______/       \______\/       \/______/   
 
-   45 degrees        90: edge on,      225: the back,     337: coming
-   (the docs'        the art hides     shows the          back around,
-   classic turn,     behind the box    mirrored art       still turned
-   = cube_turned)                      (LookAnywhere)     -- never flat
+   45 degrees        135: past edge-    225: the back     315: coming
+   (the docs'        on, the mirror    shows the          back around,
+   classic turn,     view of the       mirrored art       still turned
+   = cube_turned)    turn (LookAny-    marching back      -- never flat
+                      where, Behind)   the other way
 ```
 
 

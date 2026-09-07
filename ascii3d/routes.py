@@ -90,7 +90,8 @@ def route(art: str, direction: str = 'center', depth: int | None = None,
             lean = 1.0 if direction == 'left' else -1.0
             side = 'right' if direction == 'left' else 'left'
             return render_pose(art, Pose(lean=lean, rise=1, side=side,
-                                         reach=1.0), depth=depth)
+                                         shade=False, reach=1.0),
+                               depth=depth)
         return _engine_turn(art, direction=direction, depth=depth or
                             _auto_depth(art))
 

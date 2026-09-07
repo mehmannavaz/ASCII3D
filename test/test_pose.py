@@ -127,12 +127,38 @@ class TestTurntable:
             assert frame != flat, theta
             assert '/' in frame or '\\' in frame, theta
 
-    def test_side_wall_is_continuous_through_each_half(self):
-        """The visible side only switches where it is invisible."""
-        for theta in range(5, 175, 5):
-            assert turntable_pose(theta).side == 'right'
-        for theta in range(185, 355, 5):
-            assert turntable_pose(theta).side == 'left'
+    def test_side_wall_follows_the_quadrants(self):
+        """The drawn side wall follows the physical yaw: the box's
+        right wall for the first and third quarter (where it faces
+        the viewer), the left wall for the other two -- switching
+        exactly at the edge-on crossings."""
+        for theta in range(5, 85, 5):
+            assert turntable_pose(theta).side == 'right', theta
+        for theta in range(95, 175, 5):
+            assert turntable_pose(theta).side == 'left', theta
+        for theta in range(185, 265, 5):
+            assert turntable_pose(theta).side == 'right', theta
+        for theta in range(275, 355, 5):
+            assert turntable_pose(theta).side == 'left', theta
+
+    def test_back_half_shows_the_mirrored_content(self):
+        """The face content mirrors exactly where the box passes
+        edge-on (the back view reads mirrored)."""
+        for theta in range(5, 85, 5):
+            assert turntable_pose(theta).face == 'front', theta
+        for theta in range(95, 265, 5):
+            assert turntable_pose(theta).face == 'back', theta
+        for theta in range(275, 355, 5):
+            assert turntable_pose(theta).face == 'front', theta
+
+    def test_march_direction_flips_at_edge_on(self):
+        """The rows march right in the first/third quarter and left
+        in the others -- the honest oscillation of a rotating box
+        seen through the shear camera."""
+        for theta in (10, 45, 80, 190, 225, 260):
+            assert turntable_pose(theta).lean > 0, theta
+        for theta in (100, 135, 170, 280, 315, 350):
+            assert turntable_pose(theta).lean < 0, theta
 
     def test_frame0_is_the_docs_turn(self):
         pose = turntable_pose(45.0)

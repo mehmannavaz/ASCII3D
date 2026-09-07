@@ -53,8 +53,9 @@ class TestFrames:
         """Every frame keeps a top face going down ('only going
         down') -- the first line always has the top face's strokes."""
         for frame in frames(CUBE, steps=24):
-            first = frame.split('\n')[0]
-            assert '_' in first or '/' in first
+            lines = [ln for ln in frame.split('\n') if ln.strip()]
+            assert lines, 'empty frame'
+            assert '_' in lines[0] or '/' in lines[0]
 
     def test_first_frame_is_the_docs_turn(self):
         """Frame 0 starts on the classic turned cube (cube_turned)."""

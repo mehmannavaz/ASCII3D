@@ -35,23 +35,28 @@ from ascii3d.rotation import frames
 from ascii3d.examples import EXAMPLES
 
 timeline = frames(EXAMPLES['cube'], steps=16)
-for i in (0, 2, 8, 15):        # the turn, edge-on, the back, the return
+for i in (0, 4, 8, 12):        # the turn, the mirror, the back, the return
     print(timeline[i])
 ```
 ```
-   _______             _______           _______            _______
-  /      /\           /      /\         /\      \          /      /\
- /      /  \         /      /  \       /  \      \        /      /  \
-/______/    \       ______ /    \     /    \______\      / ______   \
-\ _  _ \. X /             \. : #/     \ X ./ _  _ /       | _  _ |: /
- \\_\\_\\: /               \. X/       \ ://_//_//         ||_||_||/
-  \______\/                 \ /         \/______/          |______|
+   _______         _______         _______         _______    
+  /      /\       /\      \       /      /\       /\      \   
+ /      /. \     / .\      \     /      /. \     / .\      \  
+/______/. : \   / : .\______\   /______/. : \   / : .\______\ 
+\ _  _ \. : /   \ : ./ _  _ /   \ _  _ \. : /   \ : ./ _  _ / 
+ \\_\\_\\. /     \ .//_//_//     \\_\\_\\. /     \ .//_//_//  
+  \______\/       \/______/       \______\/       \/______/   
 ```
 
-The art is visible for the front half of the sweep (turned, never
-flat), hides behind the box at edge-on, and the back half shows the
-art's mirrored strokes -- the "mirror the strokes and swap the
-faces" back view of `01-Theory/03-LookAnywhere.md`.
+The sweep walks the four honest quadrants of the turntable: the
+art (turned, never flat) for the first quarter, its mirror where
+the box passes edge-on -- the "mirror the strokes and swap the
+faces" back view of `01-Theory/03-LookAnywhere.md` -- the mirrored
+content marching back the other way for the third quarter, and the
+art again for the last.  Every frame is a closed box: the front
+face's bottom edge never drops, the side face's far edge meets the
+bottom closure exactly on the shared corner, and the depth
+gradient stays inside the walls.
 
 ## Options
 
