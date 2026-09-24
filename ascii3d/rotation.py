@@ -5,8 +5,10 @@ free-angle projection.  The camera stays ABOVE the box for the whole
 sweep -- every frame shows the top face receding DOWN and the depth
 marching down the side face, exactly like the hand-drawn turned view
 of the theory docs.  The flat, forward, "normal" view never appears;
-frame 0 *is* the docs' classic turn (45 degrees), i.e. the turned
-cube ``cube_turned``.
+the sweep starts on a classic 45 degree turn, and the silhouette
+breathes through the full circle: the side face sweeps its width
+with the projected ``|sin|`` of the yaw, the back half shows the
+mirrored art, and every frame is visibly turning.
 
 Every frame is drawn with single marching strokes (``|``, ``/``,
 ``\\``, one character per row) and a shaded side face -- no character
@@ -28,10 +30,13 @@ Example:
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 
+from .pose import Pose
 from .pose import render_pose as _render_pose
+from .pose import spin_depth as _spin_depth
 from .pose import turntable_pose as _turntable_pose
 
 __all__ = ['frames', 'play', 'play_frames', 'save_frames', 'to_gif',
@@ -46,19 +51,30 @@ def frames(art: str, steps: int = 24, start: float = 45.0,
     The box yaws around the vertical axis while the camera keeps a
     constant downward look (*pitch*): the top face is visible in
     every frame and the depth always marches down -- the spin is
-    "only going down", never the flat forward view.  Frame 0 is the
-    docs' classic 45 degree turn (the turned cube).
+    "only going down", never the flat forward view.  Frame 0 is a
+    classic 45 degree turned view (``start``).
+
+    The rotation reads through the silhouette *breathing*: the
+    visible side face sweeps from a sliver at face-on to the full
+    depth at edge-on, twice per turn, while the face content swaps
+    to the mirrored back at the edge-on crossings and the side wall
+    flips at the face-on moments (where the box is thinnest).  The
+    sweep steps one cell per frame (an even staircase across each
+    quadrant, the honest quantisation of the ``|sin|`` sweep), so
+    **every frame of the turn is visibly different** -- no repeated,
+    stalled or copy-pasted frames, and no zoom illusion.
 
     Args:
         art: The ASCII art as a plain string (the front face).
         steps: Number of frames in the sweep.
-        start: Yaw of the first frame, degrees (45 = the docs'
-            turned look; the default starts the spin on the turn).
+        start: Yaw of the first frame, degrees (45 = a classic
+            turned view; the default starts the spin on the turn).
         pitch: Constant downward look in degrees; above 40 the top
             face grows taller.  The sign is forced positive -- the
             camera never dips below the box.
-        depth: Depth of the 3D box (``None`` = auto, substantial
-            as the docs demand).
+        depth: Depth of the 3D box in cells (``None`` = sized to the
+            art and *steps*, deep enough that every frame steps;
+            deeper than the static turn, as the docs demand).
         shade: Fill the side face with the depth gradient.
 
     Returns:
@@ -70,12 +86,51 @@ def frames(art: str, steps: int = 24, start: float = 45.0,
     """
     if steps < 2:
         raise ValueError('steps must be >= 2')
+    # One shared box depth for the whole sweep: the side face has to
+    # travel far enough that every frame earns its own step.
+    box = _spin_depth(art, steps) if depth is None else max(depth, 1)
+    thetas = [start + i * 360.0 / steps for i in range(steps)]
     raw = []
-    for i in range(steps):
-        theta = start + i * 360.0 / steps
+    for theta in thetas:
         pose = _turntable_pose(theta, pitch=pitch)
-        raw.append(_render_pose(art, pose, depth=depth, shade=shade))
+        pose = Pose(lean=pose.lean, rise=pose.rise, side=pose.side,
+                    face=pose.face, shade=shade,
+                    reach=_spin_k(theta, box) / box)
+        raw.append(_render_pose(art, pose, depth=box))
     return _normalize_canvas(raw)
+
+
+def _spin_k(theta: float, box: int, floor: int = 3) -> int:
+    """The side-face width drawn at yaw *theta* on a *box* deep box.
+
+    The honest sweep is ``k = D * |sin theta|`` -- 0 at face-on, D at
+    edge-on.  Quantised naively that curve stalls: it is steep near
+    face-on (frames jump 2-3 cells) and flat near the peaks
+    (neighbouring frames round to the same width -- the copy-paste
+    look).  This staircase spreads the SAME sweep evenly across each
+    quadrant instead: one cell per frame, rising to the crossing and
+    falling away from it, with the crossing frames themselves taking
+    the extremes -- so every frame steps, and the width breathes at
+    a constant rate, like a real turntable.
+
+    * ``theta`` on a 90/270 boundary (edge-on): the full ``box``;
+    * ``theta`` on a 0/180 boundary (face-on): the ``floor`` sliver
+      (never the flat view -- the box keeps its turn);
+    * inside a quadrant: ``floor + ceil(span * rank)`` rising, or
+      ``box - 1 - floor(span * rank)`` falling, where ``rank`` is
+      the angle's position inside its quadrant and ``span = box - 1
+      - floor``.
+    """
+    theta %= 360.0
+    turn = theta % 90.0
+    quadrant = int(theta // 90) % 4
+    if turn < 1e-9 or 90.0 - turn < 1e-9:
+        return box if quadrant % 2 else max(floor, 3)
+    span = box - 1 - max(floor, 3)
+    rank = turn / 90.0
+    if quadrant in (0, 2):                       # rising to edge-on
+        return max(floor, 3) + int(math.ceil(span * rank))
+    return box - 1 - int(math.floor(span * rank))   # falling away
 
 
 def _normalize_canvas(raw: list[str]) -> list[str]:

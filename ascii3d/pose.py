@@ -49,23 +49,35 @@ The camera stays ABOVE the box for the whole sweep (the pitch never
 flips), so every frame is a *turned* view -- the top face is always
 visible and the depth always marches DOWN ("only going down", never
 looking up).  The flat, forward, "normal" view never appears: near
-face-on the box keeps a gentle half lean and a visible top face.
+face-on the box keeps a visible side sliver and a top face.
 
-The sweep walks the four honest quadrants of the turntable (the
-visible face, the march direction and the visible side wall follow
-the physical yaw)::
+The rotation is honest physics mapped onto the shear language.  A box
+yawing on a turntable shows two faces at a time; the drawing breathes
+exactly the way the projected widths do::
 
-    theta in [0,  90)   the art,   rows march right, right wall
-    theta in [90, 180)  the mirrored art, rows march left, left wall
-    theta in [180,270)  the mirrored art, rows march right, right wall
-    theta in [270,360)  the art,   rows march left, left wall
+    k(theta) = D * |sin theta|      the visible side face's width
 
-The face content mirrors exactly where the box passes edge-on (the
-viewer starts seeing the back, which reads mirrored -- "mirror the
-strokes and swap the faces", docs/01-Theory/03-LookAnywhere.md), and
-the side wall switches where it is edge-on and thinnest.  Every
-frame is a closed box silhouette: the front face's bottom edge is
-never dropped, so no frame is ever a hollow funnel.
+* ``k`` sweeps 0 -> D -> 0 twice per turn, so the silhouette grows to
+  its widest at edge-on and shrinks to a sliver at face-on -- the
+  rotation cue, visible in every single frame;
+* the **face content** swaps where the art face passes edge-on
+  (90/270 degrees): the back half shows the mirrored art ("mirror the
+  strokes and swap the faces", docs/01-Theory/03-LookAnywhere.md);
+* the **side wall** switches left/right where the box passes face-on
+  (0/180 degrees) -- exactly where ``k`` is at its floor, so the
+  layout flip happens at the least noticeable moment, never as a
+  jarring jump at maximum width.
+
+The quadrant table (half-open, 90 degree cells)::
+
+    theta in [0,  90)   the art,          right wall
+    theta in [90, 180)  the mirrored art, right wall
+    theta in [180,270)  the mirrored art, left wall
+    theta in [270,360)  the art,          left wall
+
+Every frame is a closed box silhouette: the front face's bottom edge
+is never dropped, so no frame is ever a hollow funnel, and the faces
+share their corners by construction (see THE ONE GEOMETRY above).
 """
 
 from __future__ import annotations
@@ -74,7 +86,8 @@ import math
 
 from .engine import mirror, normalize
 
-__all__ = ['Pose', 'auto_depth', 'render_pose', 'turntable_pose']
+__all__ = ['Pose', 'auto_depth', 'spin_depth', 'render_pose',
+           'turntable_pose']
 
 # The docs' dithered side-face ramp (docs/10-TODO's "white-gray-black
 # from 0 to 1" drawn like the hand examples: the ramp chars sit on
@@ -96,6 +109,35 @@ def auto_depth(art: str) -> int:
     """
     rows = normalize(art)
     return max(3, min(6, len(rows) // 2 + 1))
+
+
+def spin_depth(art: str, steps: int | None = None) -> int:
+    """The box depth a 360 degree spin wants.
+
+    Deeper than the static turn -- the sweep has to *breathe*: the
+    visible side face ``k`` climbs from its 3 cell floor to the full
+    depth and back, twice per revolution, one cell per frame.  The
+    sizing rule keeps both promises honest:
+
+    * proportional to the art ("the depth should be more"): roughly
+      the art's own width, so the box stays box-like -- never a
+      spire, never a slab;
+    * deep enough that a ``steps`` frame turn can give every frame
+      its own cell of travel (``steps / 4`` frames share a quadrant).
+
+    Args:
+        art: The ASCII art (the front face of the box).
+        steps: Frames per full turn (``None`` = no per-step minimum).
+
+    Returns:
+        The spin depth in cells, >= 8.
+    """
+    rows = normalize(art)
+    size = max(len(r) for r in rows) if rows else 0
+    depth = max(8, round(1.1 * size))
+    if steps:
+        depth = max(depth, 3 + int(math.ceil(steps / 4.0)))
+    return depth
 
 
 def _round(x: float) -> int:
@@ -512,8 +554,9 @@ class Pose:
             ``'back'`` draws its mirror (the back of the box).
         shade: Fill the side face with the depth gradient.
         reach: How far the depth axis reaches, as a fraction of the
-            docs' 45 degree turn (1.0 = the classic turn; the spin
-            grows it towards edge-on and shrinks it near face-on).
+            box depth (1.0 = the full ``depth`` cells of side face --
+            the docs' classic look; the turntable sweeps it with
+            ``|sin theta|`` so the box breathes as it turns).
     """
 
     __slots__ = ('lean', 'rise', 'side', 'face', 'shade', 'reach')
@@ -611,23 +654,29 @@ def turntable_pose(theta: float, pitch: float = 30.0) -> Pose:
 
     The camera stays ABOVE the box for the whole sweep (the pitch
     never flips), so every frame is a *turned* view -- the top face
-    is always visible, the depth always marches down.  The flat
-    forward view never appears: near face-on the box keeps a gentle
-    half lean and a visible top face.
+    is always visible, the depth always marches down.  The flat,
+    forward, "normal" view never appears: near face-on the box keeps
+    its 2 cell side sliver and a top face.
 
-    The sweep walks the four honest quadrants of the turntable --
-    which face is visible, which way its rows march and which side
-    wall shows all follow the physical yaw::
+    The rotation is the honest physics of a yawing box, mapped onto
+    the docs' shear language.  Two things move with *theta*::
 
-        [0, 90)    the art,        march right, right wall
-        [90, 180)  mirrored art,   march left,  left wall
-        [180,270)  mirrored art,   march right, right wall
-        [270,360)  the art,        march left,  left wall
+        [0,  90)   the art,          right wall      k rising  2 -> D
+        [90, 180)  the mirrored art, right wall      k falling D -> 2
+        [180,270)  the mirrored art, left wall       k rising  2 -> D
+        [270,360)  the art,          left wall       k falling D -> 2
 
-    The content mirrors exactly where the box passes edge-on (the
-    back view reads mirrored) and the side wall switches where it is
-    thinnest, so the sweep is as continuous as the shear style
-    allows -- and every frame is a closed box.
+    * the side wall switches left/right at 0/180 degrees -- where the
+      box passes face-on and the side face is at its 2 cell floor,
+      so the flip lands at the least noticeable moment;
+    * the face content swaps at 90/270 degrees -- where the art face
+      passes edge-on and the viewer starts seeing the back, which
+      reads mirrored ("mirror the strokes and swap the faces",
+      docs/01-Theory/03-LookAnywhere.md);
+    * the drawn depth ``k`` tracks the projected width of the visible
+      side face, ``D * |sin theta|``: the silhouette breathes from a
+      sliver at face-on to the full depth at edge-on, twice per turn
+      -- the rotation cue that makes every frame visibly turn.
 
     Args:
         theta: Yaw in degrees (0 = the art faces the viewer, 90 =
@@ -636,35 +685,31 @@ def turntable_pose(theta: float, pitch: float = 30.0) -> Pose:
             face grows (rise 2).  Sign is forced positive.
 
     Returns:
-        The snapped :class:`Pose` for that angle.
+        The :class:`Pose` for that angle; render it with
+        :func:`render_pose` (pass the same depth to every frame of a
+        sweep, e.g. :func:`spin_depth`).
     """
     theta %= 360.0
     rise = 2 if abs(pitch) > 40 else 1
 
-    # Which face the viewer sees, and which way its rows march:
-    # the front for the first and last quarter, the (mirrored) back
-    # in between; the march flips at each edge-on crossing (90 and
-    # 270) exactly where the visible face swaps -- the honest
-    # behaviour of a rotating box seen through a shear camera.
+    # Half-open quadrants.  The side wall follows the physical yaw:
+    # for the whole first half (0, 180) the box's front swings toward
+    # screen-left, so its right face is the one on the viewer's right;
+    # the second half is the mirror image.  The wall therefore flips
+    # at 0/180 -- face-on, where the side face is thinnest.
     quadrant = int(theta // 90) % 4
+    side = 'right' if quadrant in (0, 1) else 'left'
+
+    # The face content swaps at the edge-on crossings (90/270): the
+    # back of the box reads mirrored -- the docs' own recipe.
     face = 'back' if quadrant in (1, 2) else 'front'
-    march_right = quadrant in (0, 2)
-    side = 'right' if march_right else 'left'
 
-    # The lean: tan of the angle to the nearest face-on direction
-    # (0 or 180 degrees), clamped to the docs' 45 degree look and
-    # snapped to half steps so the strokes stay on the grid.
-    tilt = theta % 180.0
-    tilt = min(tilt, 180.0 - tilt)
-    tan = math.tan(math.radians(tilt))
-    lean = max(0.5, min(1.0, tan))
-    lean = _round(lean * 2) / 2.0
+    # The docs' classic 45 degree shear, marching with the wall.
+    lean = 1.0 if side == 'right' else -1.0
 
-    # The reach of the depth axis: the projected width of the side
-    # face, D*sqrt(2)*|sin theta| -- 0 at face-on, the docs' full
-    # turn at 45 degrees, widest at edge-on.  Snapped to tenths.
-    reach = math.sqrt(2.0) * abs(math.sin(math.radians(theta)))
-    reach = round(reach * 10) / 10.0
+    # The drawn depth: the projected width of the visible side face,
+    # D * |sin theta| -- 0 at face-on, D at edge-on, rendered with
+    # the 2 cell floor by render_pose (never the flat view).
+    reach = abs(math.sin(math.radians(theta)))
 
-    return Pose(lean=lean if march_right else -lean, rise=rise,
-                side=side, face=face, reach=reach)
+    return Pose(lean=lean, rise=rise, side=side, face=face, reach=reach)

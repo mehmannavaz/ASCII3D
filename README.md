@@ -26,20 +26,31 @@ generate or analyse arts with a **vision language model**:
 ```
 cube_turned_spin.gif, four of the 24 frames:
 
-   _______         _______         _______         _______    
-  /      /\       /\      \       /      /\       /\      \   
- /      /. \     / .\      \     /      /. \     / .\      \  
-/______/. : \   / : .\______\   /______/. : \   / : .\______\ 
-\ _  _ \. : /   \ : ./ _  _ /   \ _  _ \. : /   \ : ./ _  _ / 
- \\_\\_\\. /     \ .//_//_//     \\_\\_\\. /     \ .//_//_//  
-  \______\/       \/______/       \______\/       \/______/   
+                                _______                                 _______
+                               /      /\                               /\      \
+                              /      /. \                             / .\      \
+      _______                /      /. : \                           / : .\      \
+     /      /\              /      /. . :/                           \: . .\      \
+    /      /. \            /      /. . :/                             \: . .\      \
+   /      /. : \          /      /. . :/         _______               \: . .\      \
+  /      /. . :/         /      /. . :/         /\      \               \: . .\      \
+ /      /. . :/         /      /. . :/         / .\      \               \: . .\      \
+/______/. . :/         /______/. . :/         / : .\______\               \: . .\______\
+\ _  _ \. : /          \ _  _ \. : /          \ : ./ _  _ /                \ : ./ _  _ /
+ \\_\\_\\. /            \\_\\_\\. /            \ .//_//_//                  \ .//_//_//
+  \______\/              \______\/              \/______/                    \/______/
 
-   45 degrees        135: past edge-    225: the back     315: coming
-   (the docs'        on, the mirror    shows the          back around,
-   classic turn,     view of the       mirrored art       still turned
-   = cube_turned)    turn (LookAny-    marching back      -- never flat
-                      where, Behind)   the other way
+   45 degrees:        90: edge-on,      180: face-on,     270: past edge-on
+   the deep turn      the side face     the thinnest      again, the back
+   (= cube_turned)    at full width     box, the wall     (mirrored art)
+                                         flips sides
 ```
+
+The rotation is honest physics in the docs' shear language: the
+visible side face breathes with the projected width of the yawing
+box (one cell per frame -- no frame ever stalls, repeats, or
+teleports), the back half shows the mirrored art, and the wall
+switches at the face-on moments where the box is thinnest.
 
 
 Every frame is drawn with single marching strokes (`|`, `/`, `\`,

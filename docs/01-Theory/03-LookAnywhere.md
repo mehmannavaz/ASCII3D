@@ -1,6 +1,6 @@
 # Look Anywhere
 
-> **STATUS (v0.3.0):** implemented! The nine routes are live:
+> **STATUS (v0.3.1):** implemented! The nine routes are live:
 > `route(art, 'leftup')` and friends -- see the
 > [Routes](../02-Usage/01-routes.md) usage page. The notes below are
 > the original theory sketch, now backed by the box camera renderer
@@ -92,4 +92,7 @@ cannot fake (the engine would need to mirror the strokes *and* swap
 the faces). The 360 degree rotation
 (`ascii3d.rotation.frames`) passes through the behind view naturally
 as the turntable sweeps -- the back half of the spin shows the
-dotted back face of the box, the honest way to see it.
+mirrored art (the honest back of the box, exactly the "mirror the
+strokes and swap the faces" recipe above), and the side wall
+switches where the box passes face-on, at its thinnest moment, so
+the sweep stays smooth end to end.
